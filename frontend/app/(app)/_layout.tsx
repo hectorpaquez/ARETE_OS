@@ -56,6 +56,13 @@ export default function AppLayout() {
           }}
         />
         <Tabs.Screen
+          name="organisation"
+          options={{
+            title: "Organisation",
+            tabBarIcon: ({ color, size }) => <Ionicons name="git-merge-outline" size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
           name="graph"
           options={{
             title: "Graphe",
@@ -69,14 +76,9 @@ export default function AppLayout() {
             tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} />,
           }}
         />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: "Réglages",
-            tabBarIcon: ({ color, size }) => <Ionicons name="options-outline" size={size} color={color} />,
-          }}
-        />
+        <Tabs.Screen name="settings" options={{ href: null }} />
         <Tabs.Screen name="knowledge/[id]" options={{ href: null }} />
+        <Tabs.Screen name="entity/[type]/[id]" options={{ href: null }} />
       </Tabs>
 
       {/* Floating command palette FAB */}

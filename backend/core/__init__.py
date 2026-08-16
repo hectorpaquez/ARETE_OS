@@ -1,0 +1,1 @@
+# ARETÉ CORE package

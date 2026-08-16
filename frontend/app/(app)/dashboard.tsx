@@ -87,13 +87,22 @@ export default function DashboardScreen() {
                 <Text style={styles.wordmark}>ARETÉ</Text>
                 <Text style={styles.greeting}>Bonjour {user?.name || ""}</Text>
               </View>
-              <Pressable
-                testID="header-search"
-                onPress={() => router.push("/knowledge")}
-                style={styles.headerBtn}
-              >
-                <Ionicons name="search-outline" size={20} color={colors.onSurfaceSecondary} />
-              </Pressable>
+              <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                <Pressable
+                  testID="header-search"
+                  onPress={() => router.push("/knowledge")}
+                  style={styles.headerBtn}
+                >
+                  <Ionicons name="search-outline" size={20} color={colors.onSurfaceSecondary} />
+                </Pressable>
+                <Pressable
+                  testID="header-settings"
+                  onPress={() => router.push("/settings")}
+                  style={styles.headerBtn}
+                >
+                  <Ionicons name="options-outline" size={20} color={colors.onSurfaceSecondary} />
+                </Pressable>
+              </View>
             </View>
 
             {/* Quick capture */}

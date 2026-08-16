@@ -170,4 +170,78 @@ export const api = {
     apiFetch<{ role: string; content: string; created_at: string }[]>(
       `/ai/chat/history?session_id=${encodeURIComponent(session_id)}`,
     ),
+
+  // ---- CORE: generic entities ----
+  listEntities: (type: string, q?: string) =>
+    apiFetch<Entity[]>(`/entities/${type}${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  createEntity: (type: string, data: Record<string, any>) =>
+    apiFetch<any>(`/entities/${type}`, { method: "POST", body: JSON.stringify(data) }),
+  getEntity: (type: string, id: string) => apiFetch<any>(`/entities/${type}/${id}`),
+  updateEntity: (type: string, id: string, patch: Record<string, any>) =>
+    apiFetch<any>(`/entities/${type}/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
+  deleteEntity: (type: string, id: string) =>
+    apiFetch<{ ok: true }>(`/entities/${type}/${id}`, { method: "DELETE" }),
+  entityContext: (type: string, id: string, depth = 3) =>
+    apiFetch<EntityContext>(`/entities/${type}/${id}/context?depth=${depth}`),
+
+  // ---- CORE: relations ----
+  createRelation: (r: {
+    source_type: string;
+    source_id: string;
+    target_type: string;
+    target_id: string;
+    relation_type: string;
+  }) => apiFetch<any>("/relations", { method: "POST", body: JSON.stringify(r) }),
+  deleteRelation: (id: string) => apiFetch<{ ok: true }>(`/relations/${id}`, { method: "DELETE" }),
+  relationTypes: () => apiFetch<{ types: string[] }>("/relation-types"),
+
+  // ---- CORE: universal search ----
+  universalSearch: (q: string, types?: string) =>
+    apiFetch<{ results: Entity[]; counts: Record<string, number>; total: number }>(
+      `/search/universal?q=${encodeURIComponent(q)}${types ? `&types=${types}` : ""}`,
+    ),
+};
+
+export type Entity = {
+  id: string;
+  entity_type: string;
+  title: string;
+  slug?: string;
+  status?: string;
+  archived?: boolean;
+  summary?: string;
+  updated_at?: string;
+  created_at?: string;
+};
+
+export type EntityContext = {
+  entity: any;
+  outgoing: { relation_id: string; relation_type: string; entity: Entity }[];
+  backlinks: { relation_id: string; relation_type: string; entity: Entity }[];
+  related_entities: Entity[];
+  goals: Entity[];
+  projects: Entity[];
+  tasks: Entity[];
+  knowledge: Entity[];
+  books: Entity[];
+  sources: Entity[];
+  journal_entries: Entity[];
+  telos: Entity[];
+  notes: Entity[];
+  people: Entity[];
+  recent_activity: any[];
+};
+
+// Human labels for entity types (French)
+export const ENTITY_LABELS: Record<string, string> = {
+  knowledge: "Connaissance",
+  telos: "Telos",
+  goal: "Objectif",
+  project: "Projet",
+  task: "Tâche",
+  journal: "Journal",
+  book: "Livre",
+  source: "Source",
+  person: "Personne",
+  note: "Note",
 };

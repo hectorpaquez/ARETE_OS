@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { api, Page } from "@/src/api/client";
+import { api, Entity, ENTITY_LABELS } from "@/src/api/client";
 import { colors, radii, spacing, typography } from "@/src/theme/tokens";
 
 type Cmd = {
@@ -32,7 +32,7 @@ export default function CommandPalette({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<Page[]>([]);
+  const [results, setResults] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<TextInput | null>(null);
 
@@ -55,8 +55,8 @@ export default function CommandPalette({
     setLoading(true);
     const t = setTimeout(async () => {
       try {
-        const res = await api.search(q.trim());
-        if (!cancelled) setResults(res.pages);
+        const res = await api.universalSearch(q.trim());
+        if (!cancelled) setResults(res.results);
       } catch {
         if (!cancelled) setResults([]);
       } finally {
@@ -83,6 +83,7 @@ export default function CommandPalette({
             onClose();
             router.push({ pathname: "/knowledge/[id]", params: { id: page.id } });
           } catch (e: any) {
+            void e;
             // If it already exists, navigate to it
             try {
               const existing = await api.getPageByTitle(title);
@@ -90,6 +91,36 @@ export default function CommandPalette({
               router.push({ pathname: "/knowledge/[id]", params: { id: existing.id } });
             } catch {}
           }
+        },
+      },
+      {
+        id: "new-goal",
+        label: q.trim() ? `Nouvel objectif « ${q.trim()} »` : "Créer un objectif",
+        icon: "flag-outline",
+        run: async (query) => {
+          const ent = await api.createEntity("goal", { title: query.trim() || "Nouvel objectif" });
+          onClose();
+          router.push({ pathname: "/entity/[type]/[id]", params: { type: "goal", id: ent.id } });
+        },
+      },
+      {
+        id: "new-project",
+        label: q.trim() ? `Nouveau projet « ${q.trim()} »` : "Créer un projet",
+        icon: "cube-outline",
+        run: async (query) => {
+          const ent = await api.createEntity("project", { title: query.trim() || "Nouveau projet" });
+          onClose();
+          router.push({ pathname: "/entity/[type]/[id]", params: { type: "project", id: ent.id } });
+        },
+      },
+      {
+        id: "new-task",
+        label: q.trim() ? `Nouvelle tâche « ${q.trim()} »` : "Créer une tâche",
+        icon: "checkmark-circle-outline",
+        run: async (query) => {
+          const ent = await api.createEntity("task", { title: query.trim() || "Nouvelle tâche" });
+          onClose();
+          router.push({ pathname: "/entity/[type]/[id]", params: { type: "task", id: ent.id } });
         },
       },
       {
@@ -102,12 +133,12 @@ export default function CommandPalette({
         },
       },
       {
-        id: "go-knowledge",
-        label: "Aller aux Connaissances",
-        icon: "library-outline",
+        id: "go-organisation",
+        label: "Ouvrir l'Organisation",
+        icon: "git-merge-outline",
         run: () => {
           onClose();
-          router.push("/knowledge");
+          router.push("/organisation");
         },
       },
       {
@@ -192,7 +223,11 @@ export default function CommandPalette({
                 <Pressable
                   onPress={() => {
                     onClose();
-                    router.push({ pathname: "/knowledge/[id]", params: { id: item.id } });
+                    if (item.entity_type === "knowledge") {
+                      router.push({ pathname: "/knowledge/[id]", params: { id: item.id } });
+                    } else {
+                      router.push({ pathname: "/entity/[type]/[id]", params: { type: item.entity_type, id: item.id } });
+                    }
                   }}
                   style={({ pressed }) => [
                     styles.row,
@@ -210,7 +245,8 @@ export default function CommandPalette({
                       {item.title}
                     </Text>
                     <Text style={styles.rowHint} numberOfLines={1}>
-                      {item.status === "stub" ? "Ébauche" : (item.summary || item.content.slice(0, 60))}
+                      {(ENTITY_LABELS[item.entity_type] || item.entity_type) +
+                        (item.status === "stub" ? " · Ébauche" : item.summary ? " · " + item.summary : "")}
                     </Text>
                   </View>
                 </Pressable>
