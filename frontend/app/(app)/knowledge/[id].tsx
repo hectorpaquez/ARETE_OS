@@ -18,6 +18,13 @@ import { MarkdownBlocks } from "@/src/components/MarkdownBlocks";
 import { FormatToolbar, FormatAction } from "@/src/components/FormatToolbar";
 import { colors, radii, spacing, typography } from "@/src/theme/tokens";
 
+function aiErrText(e: any): string {
+  const m = e?.message || "";
+  if (m.includes("503") || m.toLowerCase().includes("clé")) return "IA indisponible (clé non configurée).";
+  if (m.includes("vide")) return "La page est vide, rien à traiter.";
+  return "L'IA a rencontré une erreur. Réessayez.";
+}
+
 export default function KnowledgePageScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [page, setPage] = useState<Page | null>(null);
@@ -31,6 +38,10 @@ export default function KnowledgePageScreen() {
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [forcedSelection, setForcedSelection] = useState<{ start: number; end: number } | null>(null);
   const contentRef = useRef<TextInput | null>(null);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "links" | "expand">(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<string[] | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const saveTimer = useRef<any>(null);
 
   const load = useCallback(async () => {
@@ -189,6 +200,69 @@ export default function KnowledgePageScreen() {
     }
   }
 
+  // ---- Daimōn (AI) actions ---------------------------------------------------
+  async function aiSummarize() {
+    if (!page || aiBusy) return;
+    setAiBusy("summary");
+    setAiError(null);
+    try {
+      const res = await api.aiSummarize(page.id);
+      setAiSummary(res.summary);
+    } catch (e: any) {
+      setAiError(aiErrText(e));
+    } finally {
+      setAiBusy(null);
+    }
+  }
+
+  async function aiSuggest() {
+    if (!page || aiBusy) return;
+    setAiBusy("links");
+    setAiError(null);
+    try {
+      const res = await api.aiSuggestLinks(page.id);
+      setAiSuggestions(res.suggestions);
+    } catch (e: any) {
+      setAiError(aiErrText(e));
+    } finally {
+      setAiBusy(null);
+    }
+  }
+
+  async function aiExpand() {
+    if (!page || aiBusy) return;
+    setAiBusy("expand");
+    setAiError(null);
+    try {
+      const res = await api.aiExpand(page.title, page.id);
+      const newContent = (content ? content.trimEnd() + "\n\n" : "") + res.text;
+      setContent(newContent);
+      const updated = await api.updatePage(page.id, { content: newContent });
+      setPage(updated);
+      setBacklinks(await api.backlinks(updated.id));
+    } catch (e: any) {
+      setAiError(aiErrText(e));
+    } finally {
+      setAiBusy(null);
+    }
+  }
+
+  async function insertSuggestion(t: string) {
+    if (!page) return;
+    const marker = `[[${t}]]`;
+    if (content.includes(marker)) return;
+    const newContent =
+      (content ? content.trimEnd() + "\n\n" : "") +
+      (content.includes("## Voir aussi") ? `- ${marker}` : `## Voir aussi\n- ${marker}`);
+    setContent(newContent);
+    setAiSuggestions((s) => (s ? s.filter((x) => x !== t) : s));
+    try {
+      const updated = await api.updatePage(page.id, { content: newContent });
+      setPage(updated);
+      setBacklinks(await api.backlinks(updated.id));
+    } catch {}
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -314,6 +388,84 @@ export default function KnowledgePageScreen() {
                     Cette page est vide. Touchez le crayon pour l'éditer.
                   </Text>
                 )}
+
+                {/* Daimōn AI actions */}
+                <View style={styles.aiSection} testID="ai-section">
+                  <Text style={styles.aiLabel}>DAIMŌN</Text>
+                  <View style={styles.aiActions}>
+                    <Pressable
+                      testID="ai-summarize"
+                      onPress={aiSummarize}
+                      disabled={!!aiBusy}
+                      style={({ pressed }) => [styles.aiBtn, pressed && { opacity: 0.7 }, !!aiBusy && { opacity: 0.5 }]}
+                    >
+                      {aiBusy === "summary" ? (
+                        <ActivityIndicator size="small" color={colors.brandPrimary} />
+                      ) : (
+                        <Ionicons name="document-text-outline" size={15} color={colors.brandPrimary} />
+                      )}
+                      <Text style={styles.aiBtnText}>Résumer</Text>
+                    </Pressable>
+                    <Pressable
+                      testID="ai-suggest-links"
+                      onPress={aiSuggest}
+                      disabled={!!aiBusy}
+                      style={({ pressed }) => [styles.aiBtn, pressed && { opacity: 0.7 }, !!aiBusy && { opacity: 0.5 }]}
+                    >
+                      {aiBusy === "links" ? (
+                        <ActivityIndicator size="small" color={colors.brandPrimary} />
+                      ) : (
+                        <Ionicons name="git-branch-outline" size={15} color={colors.brandPrimary} />
+                      )}
+                      <Text style={styles.aiBtnText}>Suggérer des liens</Text>
+                    </Pressable>
+                    <Pressable
+                      testID="ai-expand"
+                      onPress={aiExpand}
+                      disabled={!!aiBusy}
+                      style={({ pressed }) => [styles.aiBtn, pressed && { opacity: 0.7 }, !!aiBusy && { opacity: 0.5 }]}
+                    >
+                      {aiBusy === "expand" ? (
+                        <ActivityIndicator size="small" color={colors.brandPrimary} />
+                      ) : (
+                        <Ionicons name="expand-outline" size={15} color={colors.brandPrimary} />
+                      )}
+                      <Text style={styles.aiBtnText}>Développer</Text>
+                    </Pressable>
+                  </View>
+
+                  {aiError ? <Text style={styles.aiError} testID="ai-error">{aiError}</Text> : null}
+
+                  {aiSummary ? (
+                    <View style={styles.aiResult} testID="ai-summary-result">
+                      <Text style={styles.aiResultLabel}>Résumé</Text>
+                      <Text style={styles.aiResultText}>{aiSummary}</Text>
+                    </View>
+                  ) : null}
+
+                  {aiSuggestions ? (
+                    <View style={styles.aiResult} testID="ai-suggestions-result">
+                      <Text style={styles.aiResultLabel}>Connexions suggérées</Text>
+                      {aiSuggestions.length === 0 ? (
+                        <Text style={styles.aiResultText}>Aucune connexion pertinente trouvée.</Text>
+                      ) : (
+                        <View style={styles.suggWrap}>
+                          {aiSuggestions.map((s) => (
+                            <Pressable
+                              key={s}
+                              testID={`ai-suggestion-${s}`}
+                              onPress={() => insertSuggestion(s)}
+                              style={({ pressed }) => [styles.suggChip, pressed && { opacity: 0.7 }]}
+                            >
+                              <Ionicons name="add" size={13} color={colors.brandPrimary} />
+                              <Text style={styles.suggChipText}>{s}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ) : null}
+                </View>
               </>
             )}
 
@@ -410,6 +562,51 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   placeholderText: { marginTop: spacing.xl, color: colors.onSurfaceTertiary, fontSize: 14 },
+  aiSection: {
+    marginTop: spacing.xxxl,
+    paddingTop: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  aiLabel: { ...typography.overline, color: colors.brandPrimary, marginBottom: spacing.md },
+  aiActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  aiBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSecondary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    minHeight: 40,
+  },
+  aiBtnText: { color: colors.onSurface, fontSize: 13 },
+  aiError: { color: colors.onError, fontSize: 13, marginTop: spacing.md },
+  aiResult: {
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceSecondary,
+    padding: spacing.lg,
+  },
+  aiResultLabel: { ...typography.overline, color: colors.onSurfaceTertiary, marginBottom: spacing.sm },
+  aiResultText: { color: colors.onSurface, fontSize: 15, lineHeight: 23 },
+  suggWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  suggChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.brandSecondary,
+    backgroundColor: colors.brandTertiary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+  },
+  suggChipText: { color: colors.brandPrimary, fontSize: 13 },
   formatHint: {
     marginTop: spacing.md,
     color: colors.onSurfaceTertiary,

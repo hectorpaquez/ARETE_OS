@@ -24,6 +24,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 from starlette.middleware.cors import CORSMiddleware
 
+import ai_service
+
 # ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
@@ -493,6 +495,155 @@ async def stats(user: dict = Depends(get_current_user)):
 
 
 # ---------------------------------------------------------------------------
+# Daimōn — AI layer (OpenAI GPT-5.4). Decoupled from CORE.
+# ---------------------------------------------------------------------------
+class SummarizeIn(BaseModel):
+    page_id: str
+    save: bool = True
+
+
+class SuggestLinksIn(BaseModel):
+    page_id: str
+
+
+class ExpandIn(BaseModel):
+    prompt: str
+    page_id: Optional[str] = None
+
+
+class ChatIn(BaseModel):
+    message: str
+    session_id: Optional[str] = None
+
+
+@api.get("/ai/status")
+async def ai_status(user: dict = Depends(get_current_user)):
+    return {"enabled": bool(ai_service._api_key()), "model": ai_service.MODEL_NAME}
+
+
+@api.post("/ai/summarize")
+async def ai_summarize(body: SummarizeIn, user: dict = Depends(get_current_user)):
+    page = await db.pages.find_one({"id": body.page_id, "user_id": user["id"]})
+    if not page:
+        raise HTTPException(404, "Page not found")
+    if not (page.get("content") or "").strip():
+        raise HTTPException(400, "La page est vide, rien à résumer.")
+    try:
+        summary = await ai_service.summarize_page(page["title"], page.get("content", ""))
+    except ai_service.AIUnavailable as e:
+        raise HTTPException(503, str(e))
+    except Exception as e:
+        log.exception("ai_summarize failed")
+        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+    if body.save and summary:
+        await db.pages.update_one(
+            {"id": body.page_id, "user_id": user["id"]},
+            {"$set": {"summary": summary, "updated_at": now_iso()}},
+        )
+    return {"summary": summary}
+
+
+@api.post("/ai/suggest-links")
+async def ai_suggest_links(body: SuggestLinksIn, user: dict = Depends(get_current_user)):
+    page = await db.pages.find_one({"id": body.page_id, "user_id": user["id"]})
+    if not page:
+        raise HTTPException(404, "Page not found")
+    # Candidate titles = all other non-stub pages of this user
+    cursor = db.pages.find(
+        {"user_id": user["id"], "id": {"$ne": body.page_id}},
+        {"_id": 0, "title": 1, "status": 1},
+    ).limit(200)
+    candidates = [p["title"] async for p in cursor]
+    if not candidates:
+        return {"suggestions": []}
+    # Exclude titles already linked from this page
+    existing = set()
+    async for l in db.links.find({"user_id": user["id"], "source_id": body.page_id}, {"_id": 0, "target_title": 1}):
+        existing.add(l["target_title"].lower())
+    try:
+        suggested = await ai_service.suggest_links(page["title"], page.get("content", ""), candidates)
+    except ai_service.AIUnavailable as e:
+        raise HTTPException(503, str(e))
+    except Exception as e:
+        log.exception("ai_suggest_links failed")
+        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+    suggested = [s for s in suggested if s.lower() not in existing]
+    return {"suggestions": suggested}
+
+
+@api.post("/ai/expand")
+async def ai_expand(body: ExpandIn, user: dict = Depends(get_current_user)):
+    existing_content = ""
+    if body.page_id:
+        page = await db.pages.find_one({"id": body.page_id, "user_id": user["id"]})
+        if page:
+            existing_content = page.get("content", "")
+    if not body.prompt.strip():
+        raise HTTPException(400, "Prompt vide.")
+    try:
+        text = await ai_service.expand_idea(body.prompt, existing_content)
+    except ai_service.AIUnavailable as e:
+        raise HTTPException(503, str(e))
+    except Exception as e:
+        log.exception("ai_expand failed")
+        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+    return {"text": text}
+
+
+@api.post("/ai/chat")
+async def ai_chat(body: ChatIn, user: dict = Depends(get_current_user)):
+    if not body.message.strip():
+        raise HTTPException(400, "Message vide.")
+    session_id = body.session_id or str(uuid.uuid4())
+
+    # Build knowledge context from user's pages (title + summary/snippet)
+    ctx_parts: List[str] = []
+    cursor = db.pages.find(
+        {"user_id": user["id"], "status": {"$ne": "stub"}},
+        {"_id": 0, "title": 1, "summary": 1, "content": 1},
+    ).sort("updated_at", -1).limit(25)
+    async for p in cursor:
+        snippet = (p.get("summary") or p.get("content") or "").strip().replace("\n", " ")
+        if len(snippet) > 300:
+            snippet = snippet[:300] + "…"
+        ctx_parts.append(f"[[{p['title']}]]: {snippet}" if snippet else f"[[{p['title']}]]")
+    knowledge_context = "\n".join(ctx_parts)
+
+    # Load recent history for this session
+    history = []
+    async for m in db.ai_messages.find(
+        {"user_id": user["id"], "session_id": session_id}, {"_id": 0, "role": 1, "content": 1}
+    ).sort("created_at", 1).limit(20):
+        history.append(m)
+
+    try:
+        answer = await ai_service.chat_daimon(body.message, knowledge_context, history, session_id)
+    except ai_service.AIUnavailable as e:
+        raise HTTPException(503, str(e))
+    except Exception as e:
+        log.exception("ai_chat failed")
+        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+
+    # Persist both messages
+    ts = now_iso()
+    await db.ai_messages.insert_many([
+        {"id": str(uuid.uuid4()), "user_id": user["id"], "session_id": session_id,
+         "role": "user", "content": body.message, "created_at": ts},
+        {"id": str(uuid.uuid4()), "user_id": user["id"], "session_id": session_id,
+         "role": "assistant", "content": answer, "created_at": now_iso()},
+    ])
+    return {"answer": answer, "session_id": session_id}
+
+
+@api.get("/ai/chat/history")
+async def ai_chat_history(session_id: str, user: dict = Depends(get_current_user)):
+    cursor = db.ai_messages.find(
+        {"user_id": user["id"], "session_id": session_id}, {"_id": 0, "user_id": 0}
+    ).sort("created_at", 1).limit(200)
+    return [m async for m in cursor]
+
+
+# ---------------------------------------------------------------------------
 # App wiring
 # ---------------------------------------------------------------------------
 app.include_router(api)
@@ -513,6 +664,7 @@ async def on_startup():
     await db.links.create_index([("user_id", 1), ("source_id", 1)])
     await db.links.create_index([("user_id", 1), ("target_id", 1)])
     await db.activity.create_index([("user_id", 1), ("created_at", -1)])
+    await db.ai_messages.create_index([("user_id", 1), ("session_id", 1), ("created_at", 1)])
     log.info("ARETÉ Core started; indices ready.")
 
 

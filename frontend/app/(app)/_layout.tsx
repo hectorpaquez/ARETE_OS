@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, Tabs, router } from "expo-router";
+import { Redirect, Tabs, useSegments } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useAuth } from "@/src/context/AuthContext";
@@ -9,6 +9,9 @@ import { colors, spacing } from "@/src/theme/tokens";
 export default function AppLayout() {
   const { user, loading } = useAuth();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const segments = useSegments();
+  // Hide the floating palette FAB on the Daimōn chat screen (conflicts with send button)
+  const hideFab = segments[segments.length - 1] === "daimon";
 
   if (loading) {
     return (
@@ -60,6 +63,13 @@ export default function AppLayout() {
           }}
         />
         <Tabs.Screen
+          name="daimon"
+          options={{
+            title: "Daimōn",
+            tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
           name="settings"
           options={{
             title: "Réglages",
@@ -70,16 +80,18 @@ export default function AppLayout() {
       </Tabs>
 
       {/* Floating command palette FAB */}
-      <Pressable
-        testID="open-command-palette"
-        onPress={() => setPaletteOpen(true)}
-        style={({ pressed }) => [
-          styles.fab,
-          pressed && { transform: [{ scale: 0.96 }] },
-        ]}
-      >
-        <Ionicons name="flash-outline" size={22} color={colors.onBrandPrimary} />
-      </Pressable>
+      {!hideFab && (
+        <Pressable
+          testID="open-command-palette"
+          onPress={() => setPaletteOpen(true)}
+          style={({ pressed }) => [
+            styles.fab,
+            pressed && { transform: [{ scale: 0.96 }] },
+          ]}
+        >
+          <Ionicons name="flash-outline" size={22} color={colors.onBrandPrimary} />
+        </Pressable>
+      )}
 
       <CommandPalette visible={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </View>

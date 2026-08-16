@@ -5,7 +5,13 @@ ARETÉ est un système personnel unifié de connaissance, d'organisation, de pro
 
 ## Implémenté
 - V1 CORE + Connaissances (auth, pages, wiki-links, backlinks, recherche, command palette, graphe, tags, activité, stats)
-- **Éditeur de blocs façon Wikipédia (2026-08-16)** : rendu Markdown structuré (titres de section H1/H2/H3, paragraphes, citations à filet or, listes à puces & numérotées, blocs de code monospace, séparateurs) + inline `**gras**`, `*italique*`, `` `code` ``, `[[liens]]`. Barre d'outils de mise en forme au-dessus du clavier (`FormatToolbar`) qui insère la syntaxe au curseur. Le contenu reste stocké en Markdown côté serveur donc les wiki-links et backlinks fonctionnent inchangés.
+- Éditeur de blocs façon Wikipédia (titres, citations, listes, code, séparateurs, inline bold/italic/code + toolbar)
+- **Daimōn — couche IA OpenAI GPT-5.4 (2026-08-16)** : module `ai_service.py` découplé du CORE. 4 fonctions :
+  1. **Résumé de page** (`POST /api/ai/summarize`) — sauve dans `page.summary`
+  2. **Suggestions de liens** (`POST /api/ai/suggest-links`) — propose des `[[titres]]` existants pertinents, insérables en un tap
+  3. **Expansion / rédaction** (`POST /api/ai/expand`) — développe une idée en Markdown ARETÉ
+  4. **Chat Daimōn** (`POST /api/ai/chat`) — ancré RAG-lite sur les pages de l'utilisateur, historique persistant (`ai_messages`), cite en `[[liens]]`
+  - Clé : préfère la clé OpenAI de l'utilisateur (`OPENAI_API_KEY`), bascule automatiquement sur `EMERGENT_LLM_KEY` en cas de quota/auth insuffisant. Nouvel onglet **Daimōn** dans la nav.
 
 ## Scope V1
 - **Authentification** : email + mot de passe (JWT, bcrypt, expo-secure-store)

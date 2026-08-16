@@ -143,4 +143,31 @@ export const api = {
     ),
   activity: () => apiFetch<ActivityRow[]>("/activity"),
   stats: () => apiFetch<Stats>("/stats"),
+
+  // ---- Daimōn (AI) ----
+  aiStatus: () => apiFetch<{ enabled: boolean; model: string }>("/ai/status"),
+  aiSummarize: (page_id: string) =>
+    apiFetch<{ summary: string }>("/ai/summarize", {
+      method: "POST",
+      body: JSON.stringify({ page_id, save: true }),
+    }),
+  aiSuggestLinks: (page_id: string) =>
+    apiFetch<{ suggestions: string[] }>("/ai/suggest-links", {
+      method: "POST",
+      body: JSON.stringify({ page_id }),
+    }),
+  aiExpand: (prompt: string, page_id?: string) =>
+    apiFetch<{ text: string }>("/ai/expand", {
+      method: "POST",
+      body: JSON.stringify({ prompt, page_id }),
+    }),
+  aiChat: (message: string, session_id?: string) =>
+    apiFetch<{ answer: string; session_id: string }>("/ai/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, session_id }),
+    }),
+  aiChatHistory: (session_id: string) =>
+    apiFetch<{ role: string; content: string; created_at: string }[]>(
+      `/ai/chat/history?session_id=${encodeURIComponent(session_id)}`,
+    ),
 };
