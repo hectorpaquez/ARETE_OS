@@ -3,6 +3,10 @@
 ## Vision
 ARETÉ est un système personnel unifié de connaissance, d'organisation, de progression et d'action. La V1 pose la fondation : CORE (auth, entités, relations, recherche, historique) + Connaissances (pages, liens bidirectionnels, backlinks, tags, graphe).
 
+## Implémenté
+- V1 CORE + Connaissances (auth, pages, wiki-links, backlinks, recherche, command palette, graphe, tags, activité, stats)
+- **Éditeur de blocs façon Wikipédia (2026-08-16)** : rendu Markdown structuré (titres de section H1/H2/H3, paragraphes, citations à filet or, listes à puces & numérotées, blocs de code monospace, séparateurs) + inline `**gras**`, `*italique*`, `` `code` ``, `[[liens]]`. Barre d'outils de mise en forme au-dessus du clavier (`FormatToolbar`) qui insère la syntaxe au curseur. Le contenu reste stocké en Markdown côté serveur donc les wiki-links et backlinks fonctionnent inchangés.
+
 ## Scope V1
 - **Authentification** : email + mot de passe (JWT, bcrypt, expo-secure-store)
 - **Knowledge Pages** : CRUD complet avec titre, contenu, tags, statut

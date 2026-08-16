@@ -14,7 +14,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api, LinkRow, Page } from "@/src/api/client";
-import { RichText } from "@/src/components/RichText";
+import { MarkdownBlocks } from "@/src/components/MarkdownBlocks";
+import { FormatToolbar, FormatAction } from "@/src/components/FormatToolbar";
 import { colors, radii, spacing, typography } from "@/src/theme/tokens";
 
 export default function KnowledgePageScreen() {
@@ -27,6 +28,9 @@ export default function KnowledgePageScreen() {
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [forcedSelection, setForcedSelection] = useState<{ start: number; end: number } | null>(null);
+  const contentRef = useRef<TextInput | null>(null);
   const saveTimer = useRef<any>(null);
 
   const load = useCallback(async () => {
@@ -94,6 +98,95 @@ export default function KnowledgePageScreen() {
       await api.deletePage(page.id);
       router.back();
     } catch {}
+  }
+
+  // ---- Block formatting -----------------------------------------------------
+  function applyEdit(newText: string, cursor: number) {
+    setContent(newText);
+    setForcedSelection({ start: cursor, end: cursor });
+    requestAnimationFrame(() => contentRef.current?.focus());
+  }
+
+  function lineBoundsAt(text: string, pos: number) {
+    const start = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1;
+    let end = text.indexOf("\n", pos);
+    if (end === -1) end = text.length;
+    return { start, end };
+  }
+
+  function toggleLinePrefix(prefixes: string[]) {
+    const pos = selection.start;
+    const { start } = lineBoundsAt(content, pos);
+    const lineStartText = content.slice(start);
+    // Strip any existing list/heading/quote prefix first
+    const existing = /^(#{1,3}\s|>\s|-\s|\d+\.\s)/.exec(lineStartText);
+    let stripLen = existing ? existing[0].length : 0;
+    const primary = prefixes[0];
+    const alreadyHas = lineStartText.startsWith(primary);
+    const before = content.slice(0, start);
+    const rest = content.slice(start + stripLen);
+    let newText: string;
+    let cursor: number;
+    if (alreadyHas && stripLen === primary.length) {
+      // toggle off
+      newText = before + rest;
+      cursor = Math.max(start, pos - primary.length);
+    } else {
+      newText = before + primary + rest;
+      cursor = pos - stripLen + primary.length;
+    }
+    applyEdit(newText, cursor);
+  }
+
+  function wrapSelection(wrap: string, placeholder: string) {
+    const { start, end } = selection;
+    const sel = content.slice(start, end) || placeholder;
+    const newText = content.slice(0, start) + wrap + sel + wrap + content.slice(end);
+    const cursor = start + wrap.length + sel.length + wrap.length;
+    applyEdit(newText, cursor);
+  }
+
+  function insertLink() {
+    const { start, end } = selection;
+    const sel = content.slice(start, end) || "Titre";
+    const newText = content.slice(0, start) + "[[" + sel + "]]" + content.slice(end);
+    // place cursor inside brackets if placeholder, else after
+    const cursor = start + 2 + sel.length;
+    applyEdit(newText, cursor);
+  }
+
+  function insertCodeBlock() {
+    const pos = selection.start;
+    const prefix = pos > 0 && content[pos - 1] !== "\n" ? "\n" : "";
+    const snippet = prefix + "```\ncode\n```\n";
+    const newText = content.slice(0, pos) + snippet + content.slice(pos);
+    const cursor = pos + prefix.length + 4; // right after opening fence + newline
+    applyEdit(newText, cursor);
+  }
+
+  function onFormat(action: FormatAction) {
+    switch (action) {
+      case "h1":
+        return toggleLinePrefix(["# "]);
+      case "h2":
+        return toggleLinePrefix(["## "]);
+      case "h3":
+        return toggleLinePrefix(["### "]);
+      case "quote":
+        return toggleLinePrefix(["> "]);
+      case "ul":
+        return toggleLinePrefix(["- "]);
+      case "ol":
+        return toggleLinePrefix(["1. "]);
+      case "bold":
+        return wrapSelection("**", "texte");
+      case "italic":
+        return wrapSelection("*", "texte");
+      case "code":
+        return insertCodeBlock();
+      case "link":
+        return insertLink();
+    }
   }
 
   if (loading) {
@@ -179,15 +272,24 @@ export default function KnowledgePageScreen() {
                   autoCapitalize="none"
                 />
                 <TextInput
+                  ref={contentRef}
                   testID="page-content-input"
                   value={content}
                   onChangeText={setContent}
+                  onSelectionChange={(e) => {
+                    setSelection(e.nativeEvent.selection);
+                    if (forcedSelection) setForcedSelection(null);
+                  }}
+                  selection={forcedSelection ?? undefined}
                   style={styles.contentInput}
-                  placeholder="Écrivez ici. Utilisez [[Titre]] pour créer un lien vers une autre page."
+                  placeholder="Écrivez ici. Utilisez [[Titre]] pour lier une page, ## pour un titre, > pour une citation, - pour une liste."
                   placeholderTextColor={colors.onSurfaceTertiary}
                   multiline
                   textAlignVertical="top"
                 />
+                <Text style={styles.formatHint}>
+                  Astuce : Markdown supporté — ## Titre · &gt; Citation · - Liste · ``` code ``` · **gras** · [[lien]]
+                </Text>
               </>
             ) : (
               <>
@@ -204,11 +306,9 @@ export default function KnowledgePageScreen() {
                   </View>
                 )}
                 {page.content ? (
-                  <RichText
-                    text={page.content}
-                    onLinkPress={onLinkPress}
-                    style={styles.contentView}
-                  />
+                  <View style={styles.contentView}>
+                    <MarkdownBlocks content={content} onLinkPress={onLinkPress} />
+                  </View>
                 ) : (
                   <Text style={styles.placeholderText}>
                     Cette page est vide. Touchez le crayon pour l'éditer.
@@ -247,6 +347,7 @@ export default function KnowledgePageScreen() {
             </View>
           </View>
         </ScrollView>
+        {editMode && <FormatToolbar onAction={onFormat} />}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -309,6 +410,12 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   placeholderText: { marginTop: spacing.xl, color: colors.onSurfaceTertiary, fontSize: 14 },
+  formatHint: {
+    marginTop: spacing.md,
+    color: colors.onSurfaceTertiary,
+    fontSize: 11,
+    lineHeight: 16,
+  },
   backlinksSection: {
     marginTop: spacing.xxxl,
     paddingTop: spacing.xl,
