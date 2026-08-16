@@ -1,0 +1,148 @@
+{
+  "app_name": "ARETÉ",
+  "personality": "6 Glass / Luxe DARK structure with 7 Dark-First Utility precision and 3 Editorial typography",
+  "personality_one_liner": "An intellectual, dark-mode command center that feels like a premium, modern stoic OS—precise, calm, and deeply organized.",
+  "color": {
+    "surface": "#0C0C0E",
+    "onSurface": "#EAEAEA",
+    "surfaceSecondary": "#141416",
+    "onSurfaceSecondary": "#A3A3A8",
+    "surfaceTertiary": "#1C1C1F",
+    "onSurfaceTertiary": "#7D7D82",
+    "surfaceInverse": "#EAEAEA",
+    "onSurfaceInverse": "#0C0C0E",
+    "brand": "#C8A97E",
+    "brandPrimary": "#C8A97E",
+    "onBrandPrimary": "#0C0C0E",
+    "brandSecondary": "#8C7355",
+    "onBrandSecondary": "#EAEAEA",
+    "brandTertiary": "#2D261C",
+    "onBrandTertiary": "#C8A97E",
+    "success": "#314235",
+    "onSuccess": "#B3CFB9",
+    "warning": "#544020",
+    "onWarning": "#EAD2A8",
+    "error": "#5C2323",
+    "onError": "#E8B0B0",
+    "info": "#2A3745",
+    "onInfo": "#B0CBE8",
+    "border": "#222226",
+    "borderStrong": "#333338",
+    "divider": "#18181A"
+  },
+  "typography": {
+    "displayFontFamily": "Cormorant Garamond",
+    "textFontFamily": "Geist",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical rhythm for editorial feel. Sharp horizontal alignment. Avoid boxing everything in cards; use edge-to-edge layouts with subtle borders.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 2,
+    "md": 6,
+    "lg": 12,
+    "pill": 999
+  },
+  "shadow_tier": 0,
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use heavy frosted glass on sticky headers, tab bars, and the Command Palette (Cmd+K) overlay.",
+      "Pair blur with a translucent tinted base (75% opacity of surface) for readability."
+    ],
+    "dont's": [
+      "Never blur body content or list rows.",
+      "Do not use glass for text inputs or standard buttons."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Dashboard",
+      "purpose": "A calm daily overview (Activity, Quick Capture, and Shortcuts).",
+      "states": {
+        "loading": "Centered minimalist spinner in Antique Gold.",
+        "empty": "N/A - Dashboard is never empty, shows welcome widgets.",
+        "error": "Subtle text notice with a retry button."
+      },
+      "layout": "Header with 'ARETÉ' wordmark (serif) and minimal glass effect. Top section: Quick Capture input (styled as a seamless block, not a heavy card). Below: 'Activity History' list with hairline dividers (no cards). Focus on typography and vertical flow."
+    },
+    {
+      "name": "KnowledgeBase",
+      "purpose": "Index of all pages, folders, and tags (Quartier Général/Bibliothèque).",
+      "states": {
+        "loading": "Skeleton rows mimicking text layout.",
+        "empty": "Stoic marble bust illustration + 'Your library is empty. Start writing.'",
+        "error": "Error message with retry."
+      },
+      "layout": "Search bar at the top. Edge-to-edge list of knowledge pages. Rows use subtle padding and a right chevron. Grouped by tags or recent. No outer borders or heavy cards, just elegant dividers."
+    },
+    {
+      "name": "KnowledgePage",
+      "purpose": "The core editor and reader view with bidirectional linking.",
+      "states": {
+        "loading": "Subtle loading state.",
+        "empty": "Blank canvas with 'Type to start, [[ for links, / for commands'.",
+        "error": "Error loading page."
+      },
+      "layout": "Clean, distraction-free reading/writing view. Massive serif title at the top. Body text in Geist. Wiki-links [[Page]] highlighted in brandPrimary. At the bottom: a distinct 'Backlinks Panel' showing pages that reference this one."
+    },
+    {
+      "name": "CommandPalette",
+      "purpose": "Global quick-action overlay (Cmd+K equivalent) for search, navigation, and creation.",
+      "states": {
+        "loading": "Search spinner.",
+        "empty": "List of default commands (Create Page, Go to Dashboard).",
+        "error": "N/A"
+      },
+      "layout": "Triggered via floating FAB or header icon. Full-screen frosted glass overlay. Large, seamless input field at the top. List of instant search results and commands below. Extremely fast, keyboard-focused."
+    }
+  ],
+  "images": {
+    "hero_empty_state": {
+      "url": "https://images.unsplash.com/photo-1729008712499-5e6b58420789?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxkYXJrJTIwbWFyYmxlJTIwc3RvaWMlMjBzdGF0dWUlMjBidXN0fGVufDB8fHx8MTc4Njg5MDYzMXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Dark marble bust of a stoic statue, conveying intellectual depth"
+    },
+    "section_background": {
+      "url": "https://images.unsplash.com/photo-1782402883417-f6b73ee5ea41?crop=entropy&cs=srgb&fm=jpg&ixid=M3w8NjY2NzV8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwZ29sZCUyMGdlb21ldHJpYyUyMGxpbmUlMjBkYXJrfGVufDB8fHx8MTc4Njg5MDYzMXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalist gold geometric lines on a dark background for tactical precision"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Design an intellectual, dark-mode personal OS. Avoid generic SaaS 'cards' completely. Use edge-to-edge layouts with subtle 1px dividers to separate content.",
+    "Implement the 'Wiki-style Bidirectional Links' visually. Any text in [[Brackets]] should be styled with brandPrimary color and be pressable.",
+    "The Knowledge Page must have a 'Backlinks Panel' at the bottom of the content. This is non-negotiable for a knowledge base.",
+    "Build a Command Palette overlay (Cmd+K equivalent). Use @gorhom/bottom-sheet or a full-screen glass modal with a seamless search input. It should feel instantaneous and highly technical.",
+    "Follow the color palette strictly: #0C0C0E (obsidian canvas) with #C8A97E (Antique Gold) accents. No purples, no blues.",
+    "Typography is critical: Use 'Cormorant Garamond' for large, imposing titles and 'Geist' for perfectly readable, modern body text and UI labels.",
+    "Use the provided stoic marble statue image as the primary empty state visual for the Knowledge Base, applying a heavy dark gradient scrim over it so it blends into the background.",
+    "Include a 'Quick Capture' input block directly on the Dashboard for immediate thought logging."
+  ]
+}
