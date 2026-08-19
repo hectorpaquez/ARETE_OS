@@ -13,6 +13,12 @@ ARETÉ est un système personnel unifié de connaissance, d'organisation, de pro
   4. **Chat Daimōn** (`POST /api/ai/chat`) — ancré RAG-lite sur les pages de l'utilisateur, historique persistant (`ai_messages`), cite en `[[liens]]`
   - Clé : préfère la clé OpenAI de l'utilisateur (`OPENAI_API_KEY`), bascule automatiquement sur `EMERGENT_LLM_KEY` en cas de quota/auth insuffisant. Nouvel onglet **Daimōn** dans la nav.
 
+## Implémenté
+- V1 CORE + Connaissances + éditeur de blocs + Daimōn (GPT-5.4)
+- **Refactor ARETÉ CORE** : entités génériques, relations typées bidirectionnelles, Context Engine, recherche universelle, graphe local, migration links→relations (49/49 tests backend)
+- **Piliers/Académies + Journal + Dashboard enrichi (2026-08-19)** : type `pillar` (5 piliers seedés, reliés au CORE), écrans Académies (index + détail), Journal quotidien à métriques (sommeil/énergie/deep work/lecture/méditation/sport/3 victoires), Dashboard avec accès rapides + devise
+- **Page Suivi `/tracking` (2026-08-19)** : types `workout`/`study`, endpoint `/api/tracking` agrégé, sparklines 14 j (react-native-svg), sessions sport/étude avec ajout, indicateurs hebdo/mensuels (placeholders), carte Apple Santé (build natif requis, architecture prête)
+
 ## Scope V1
 - **Authentification** : email + mot de passe (JWT, bcrypt, expo-secure-store)
 - **Knowledge Pages** : CRUD complet avec titre, contenu, tags, statut

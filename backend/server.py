@@ -563,6 +563,12 @@ class EntityIn(BaseModel):
     subsections: Optional[List[str]] = None
     order: Optional[int] = None
     icon: Optional[str] = None
+    # Session / tracking fields
+    duration_minutes: Optional[int] = None
+    subject: Optional[str] = None
+    notes: Optional[str] = None
+    screen_time_hours: Optional[float] = None
+    discipline_score: Optional[int] = None
 
 
 class EntityUpdate(EntityIn):
@@ -768,6 +774,40 @@ async def list_pillars(user: dict = Depends(get_current_user)):
             await entity_service.create_entity("pillar", user["id"], dict(p))
     cursor = db.pillars.find({"user_id": user["id"]}, {"_id": 0, "user_id": 0}).sort("order", 1)
     return [p async for p in cursor]
+
+
+# ---- Suivi / Tracking ------------------------------------------------------
+@api.get("/tracking")
+async def tracking(days: int = 14, user: dict = Depends(get_current_user)):
+    """Aggregated tracking data: journal metric series + recent sessions."""
+    journals = []
+    async for j in db.journal.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("created_at", -1).limit(days):
+        journals.append({
+            "date": j.get("date") or j.get("created_at"),
+            "sleep_hours": j.get("sleep_hours"),
+            "deep_work_minutes": j.get("deep_work_minutes"),
+            "reading_minutes": j.get("reading_minutes"),
+            "meditation_minutes": j.get("meditation_minutes"),
+            "sport_minutes": (j.get("duration_minutes") if j.get("sport") else 0) or (60 if j.get("sport") else 0),
+            "energy": j.get("energy"),
+            "mood": j.get("mood"),
+        })
+    journals.reverse()  # chronological
+
+    async def recent(coll):
+        out = []
+        async for s in db[coll].find(
+            {"user_id": user["id"], "archived": {"$ne": True}}, {"_id": 0, "user_id": 0}
+        ).sort("created_at", -1).limit(5):
+            out.append(s)
+        return out
+
+    workouts = await recent("workouts")
+    studies = await recent("studies")
+    return {"journals": journals, "workouts": workouts, "studies": studies}
+
 
 
 

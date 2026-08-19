@@ -23,10 +23,12 @@ ENTITY_COLLECTIONS: Dict[str, str] = {
     "source": "sources",
     "person": "people",
     "note": "notes",
+    "workout": "workouts",
+    "study": "studies",
 }
 
 # Types managed by the generic entity CRUD (knowledge keeps its own endpoints).
-GENERIC_TYPES = {"pillar", "telos", "goal", "project", "task", "journal", "book", "source", "person", "note"}
+GENERIC_TYPES = {"pillar", "telos", "goal", "project", "task", "journal", "book", "source", "person", "note", "workout", "study"}
 
 VALID_TYPES = set(ENTITY_COLLECTIONS.keys())
 

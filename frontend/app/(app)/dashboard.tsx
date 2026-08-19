@@ -178,6 +178,15 @@ export default function DashboardScreen() {
                 <Text style={styles.quickTitle}>Daimōn</Text>
                 <Text style={styles.quickHint}>Interroger</Text>
               </Pressable>
+              <Pressable
+                testID="quick-tracking"
+                onPress={() => router.push("/tracking")}
+                style={({ pressed }) => [styles.quickCard, pressed && { borderColor: colors.brandSecondary }]}
+              >
+                <Ionicons name="stats-chart-outline" size={22} color={colors.brandPrimary} />
+                <Text style={styles.quickTitle}>Suivi</Text>
+                <Text style={styles.quickHint}>Indicateurs</Text>
+              </Pressable>
             </View>
 
             {/* Devise */}
@@ -343,9 +352,10 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
   },
   statSep: { width: 1, height: 32, backgroundColor: colors.divider },
-  quickAccessRow: { flexDirection: "row", gap: spacing.md, paddingHorizontal: spacing.xl, marginTop: spacing.xxl },
+  quickAccessRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, paddingHorizontal: spacing.xl, marginTop: spacing.xxl },
   quickCard: {
-    flex: 1,
+    flexBasis: "47%",
+    flexGrow: 1,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.lg,

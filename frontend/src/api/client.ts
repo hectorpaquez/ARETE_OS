@@ -203,6 +203,10 @@ export const api = {
 
   // ---- Piliers / Académies ----
   pillars: () => apiFetch<Pillar[]>("/pillars"),
+
+  // ---- Suivi / Tracking ----
+  tracking: () =>
+    apiFetch<{ journals: any[]; workouts: any[]; studies: any[] }>("/tracking"),
 };
 
 export type Pillar = {
