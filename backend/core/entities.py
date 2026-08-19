@@ -13,6 +13,7 @@ from core.db import db, now_iso, new_id, slugify
 # entity_type -> collection name
 ENTITY_COLLECTIONS: Dict[str, str] = {
     "knowledge": "pages",       # existing knowledge pages
+    "pillar": "pillars",
     "telos": "telos",
     "goal": "goals",
     "project": "projects",
@@ -25,7 +26,7 @@ ENTITY_COLLECTIONS: Dict[str, str] = {
 }
 
 # Types managed by the generic entity CRUD (knowledge keeps its own endpoints).
-GENERIC_TYPES = {"telos", "goal", "project", "task", "journal", "book", "source", "person", "note"}
+GENERIC_TYPES = {"pillar", "telos", "goal", "project", "task", "journal", "book", "source", "person", "note"}
 
 VALID_TYPES = set(ENTITY_COLLECTIONS.keys())
 

@@ -551,6 +551,18 @@ class EntityIn(BaseModel):
     principles: Optional[str] = None
     tags: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
+    # Journal metrics
+    sleep_hours: Optional[float] = None
+    energy: Optional[int] = None
+    deep_work_minutes: Optional[int] = None
+    reading_minutes: Optional[int] = None
+    meditation_minutes: Optional[int] = None
+    sport: Optional[bool] = None
+    wins: Optional[List[str]] = None
+    # Pillar fields
+    subsections: Optional[List[str]] = None
+    order: Optional[int] = None
+    icon: Optional[str] = None
 
 
 class EntityUpdate(EntityIn):
@@ -720,6 +732,42 @@ async def universal_search_ep(
 ):
     type_list = [t.strip() for t in types.split(",")] if types else None
     return await search_service.universal_search(user["id"], q, types=type_list)
+
+
+# ---- Piliers / Académies ---------------------------------------------------
+PILLAR_SEED = [
+    {"slug": "maitre-de-soi", "title": "Maître de soi", "icon": "shield-outline",
+     "description": "Gouverner son attention, ses émotions, ses habitudes et ses impulsions.",
+     "subsections": ["Discipline", "Concentration", "Gestion du téléphone", "Maîtrise émotionnelle",
+                     "Méditation", "Respiration", "Journal", "Protocoles"], "order": 1},
+    {"slug": "guerrier", "title": "Guerrier", "icon": "barbell-outline",
+     "description": "Construire un corps robuste, endurant, puissant et durable.",
+     "subsections": ["Standards physiques", "Programme hebdomadaire", "Force", "Course", "Natation",
+                     "Sprint", "Mobilité", "Nutrition", "Sommeil", "Récupération", "Tests", "Protocoles"], "order": 2},
+    {"slug": "savant", "title": "Savant", "icon": "school-outline",
+     "description": "Développer la capacité à comprendre rapidement des problèmes complexes.",
+     "subsections": ["Méthode d'apprentissage", "Travail profond", "Mémoire", "Résolution de problèmes",
+                     "Mathématiques", "Physique", "Informatique", "IA", "Expression écrite", "Anglais", "Protocoles"], "order": 3},
+    {"slug": "strategiste", "title": "Stratège", "icon": "map-outline",
+     "description": "Penser à long terme, décider sous incertitude et allouer les ressources.",
+     "subsections": ["Pensée stratégique", "Prise de décision", "Modèles mentaux", "Théorie des jeux",
+                     "Histoire militaire", "Géopolitique", "Économie", "Analyse de risque", "Protocoles"], "order": 4},
+    {"slug": "chef", "title": "Chef", "icon": "people-outline",
+     "description": "Inspirer confiance, communiquer, décider et diriger.",
+     "subsections": ["Leadership", "Commandement", "Communication", "Rhétorique", "Négociation",
+                     "Gestion de conflit", "Intelligence émotionnelle", "Gestion d'équipe", "Prise de parole", "Protocoles"], "order": 5},
+]
+
+
+@api.get("/pillars")
+async def list_pillars(user: dict = Depends(get_current_user)):
+    """List the 5 pillars, seeding them on first access (idempotent)."""
+    existing = await db.pillars.count_documents({"user_id": user["id"]})
+    if existing == 0:
+        for p in PILLAR_SEED:
+            await entity_service.create_entity("pillar", user["id"], dict(p))
+    cursor = db.pillars.find({"user_id": user["id"]}, {"_id": 0, "user_id": 0}).sort("order", 1)
+    return [p async for p in cursor]
 
 
 

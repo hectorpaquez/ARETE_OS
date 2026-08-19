@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityRow, api, Page, Stats } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
-import { colors, radii, spacing, typography } from "@/src/theme/tokens";
+import { colors, fonts, radii, spacing, typography } from "@/src/theme/tokens";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -49,7 +49,7 @@ export default function DashboardScreen() {
       setCapture("");
       await load();
       router.push({ pathname: "/knowledge/[id]", params: { id: page.id } });
-    } catch (e: any) {
+    } catch {
       // fallback: try to open existing
       try {
         const existing = await api.getPageByTitle(title);
@@ -149,6 +149,42 @@ export default function DashboardScreen() {
               <StatCell label="Ébauches" value={stats?.stubs ?? 0} />
             </View>
 
+            {/* Quick access: Académies + Journal */}
+            <View style={styles.quickAccessRow} testID="dashboard-quick-access">
+              <Pressable
+                testID="quick-academies"
+                onPress={() => router.push("/academies")}
+                style={({ pressed }) => [styles.quickCard, pressed && { borderColor: colors.brandSecondary }]}
+              >
+                <Ionicons name="library-outline" size={22} color={colors.brandPrimary} />
+                <Text style={styles.quickTitle}>Académies</Text>
+                <Text style={styles.quickHint}>Les 5 piliers</Text>
+              </Pressable>
+              <Pressable
+                testID="quick-journal"
+                onPress={() => router.push("/journal")}
+                style={({ pressed }) => [styles.quickCard, pressed && { borderColor: colors.brandSecondary }]}
+              >
+                <Ionicons name="book-outline" size={22} color={colors.brandPrimary} />
+                <Text style={styles.quickTitle}>Journal</Text>
+                <Text style={styles.quickHint}>Entrée du jour</Text>
+              </Pressable>
+              <Pressable
+                testID="quick-daimon"
+                onPress={() => router.push("/daimon")}
+                style={({ pressed }) => [styles.quickCard, pressed && { borderColor: colors.brandSecondary }]}
+              >
+                <Ionicons name="sparkles-outline" size={22} color={colors.brandPrimary} />
+                <Text style={styles.quickTitle}>Daimōn</Text>
+                <Text style={styles.quickHint}>Interroger</Text>
+              </Pressable>
+            </View>
+
+            {/* Devise */}
+            <Text style={styles.devise}>
+              « La maîtrise de soi au service d&apos;une œuvre plus grande que soi. »
+            </Text>
+
             {/* Recent pages */}
             {recentPages.length > 0 && (
               <View style={{ marginTop: spacing.xxl }}>
@@ -190,7 +226,7 @@ export default function DashboardScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyActivity}>
-            <Text style={styles.emptyText}>Aucune activité pour l'instant.</Text>
+            <Text style={styles.emptyText}>Aucune activité pour l&apos;instant.</Text>
           </View>
         }
       />
@@ -307,6 +343,29 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
   },
   statSep: { width: 1, height: 32, backgroundColor: colors.divider },
+  quickAccessRow: { flexDirection: "row", gap: spacing.md, paddingHorizontal: spacing.xl, marginTop: spacing.xxl },
+  quickCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceSecondary,
+    padding: spacing.md,
+    gap: 6,
+  },
+  quickTitle: { color: colors.onSurface, fontSize: 14, fontWeight: "600", marginTop: spacing.xs },
+  quickHint: { color: colors.onSurfaceTertiary, fontSize: 11 },
+  devise: {
+    ...typography.body,
+    fontFamily: fonts.displaySerif,
+    fontStyle: "italic",
+    color: colors.onSurfaceSecondary,
+    fontSize: 16,
+    textAlign: "center",
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.xxl,
+    lineHeight: 24,
+  },
   statValue: {
     ...typography.h2,
     fontSize: 22,

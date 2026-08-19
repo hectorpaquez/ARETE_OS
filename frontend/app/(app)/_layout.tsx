@@ -11,7 +11,7 @@ export default function AppLayout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const segments = useSegments();
   // Hide the floating palette FAB on the Daimōn chat screen (conflicts with send button)
-  const hideFab = segments[segments.length - 1] === "daimon";
+  const hideFab = ["daimon", "journal"].includes(segments[segments.length - 1] as string);
 
   if (loading) {
     return (
@@ -79,6 +79,9 @@ export default function AppLayout() {
         <Tabs.Screen name="settings" options={{ href: null }} />
         <Tabs.Screen name="knowledge/[id]" options={{ href: null }} />
         <Tabs.Screen name="entity/[type]/[id]" options={{ href: null }} />
+        <Tabs.Screen name="academies/index" options={{ href: null }} />
+        <Tabs.Screen name="academies/[slug]" options={{ href: null }} />
+        <Tabs.Screen name="journal" options={{ href: null }} />
       </Tabs>
 
       {/* Floating command palette FAB */}

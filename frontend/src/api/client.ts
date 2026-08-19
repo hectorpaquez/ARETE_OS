@@ -200,6 +200,20 @@ export const api = {
     apiFetch<{ results: Entity[]; counts: Record<string, number>; total: number }>(
       `/search/universal?q=${encodeURIComponent(q)}${types ? `&types=${types}` : ""}`,
     ),
+
+  // ---- Piliers / Académies ----
+  pillars: () => apiFetch<Pillar[]>("/pillars"),
+};
+
+export type Pillar = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  subsections: string[];
+  icon?: string;
+  order: number;
+  status?: string;
 };
 
 export type Entity = {
