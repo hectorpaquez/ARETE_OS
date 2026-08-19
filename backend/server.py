@@ -40,7 +40,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
-JWT_SECRET = os.environ.get("JWT_SECRET", "arete-dev-secret-change-in-prod-64chars-minimum-length-required")
+JWT_SECRET = os.environ["JWT_SECRET"]  # required; no fallback (fail fast if unset)
 JWT_ALGO = "HS256"
 JWT_EXPIRES_HOURS = 24 * 30  # 30 days
 
@@ -851,7 +851,7 @@ async def ai_summarize(body: SummarizeIn, user: dict = Depends(get_current_user)
         raise HTTPException(503, str(e))
     except Exception as e:
         log.exception("ai_summarize failed")
-        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+        raise HTTPException(502, "Le service IA est momentanément indisponible. Réessayez.")
     if body.save and summary:
         await db.pages.update_one(
             {"id": body.page_id, "user_id": user["id"]},
@@ -883,7 +883,7 @@ async def ai_suggest_links(body: SuggestLinksIn, user: dict = Depends(get_curren
         raise HTTPException(503, str(e))
     except Exception as e:
         log.exception("ai_suggest_links failed")
-        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+        raise HTTPException(502, "Le service IA est momentanément indisponible. Réessayez.")
     suggested = [s for s in suggested if s.lower() not in existing]
     return {"suggestions": suggested}
 
@@ -903,7 +903,7 @@ async def ai_expand(body: ExpandIn, user: dict = Depends(get_current_user)):
         raise HTTPException(503, str(e))
     except Exception as e:
         log.exception("ai_expand failed")
-        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+        raise HTTPException(502, "Le service IA est momentanément indisponible. Réessayez.")
     return {"text": text}
 
 
@@ -930,7 +930,7 @@ async def ai_chat(body: ChatIn, user: dict = Depends(get_current_user)):
         raise HTTPException(503, str(e))
     except Exception as e:
         log.exception("ai_chat failed")
-        raise HTTPException(502, f"Erreur du modèle IA: {e}")
+        raise HTTPException(502, "Le service IA est momentanément indisponible. Réessayez.")
 
     # Persist both messages
     ts = now_iso()

@@ -1,0 +1,33 @@
+{
+  "summary": "Backend-only security fix verification for ARETÉ. Wrote /app/backend/tests/test_security_fix.py (14 tests, all pass) covering SEC-001 (JWT_SECRET hardening), SEC-002 (AI error sanitization) and regressions (multi-tenant isolation + core CORE flows). All 14/14 tests pass against the public preview URL. SEC-001 confirmed: a JWT forged/signed with the OLD hardcoded secret ('arete-dev-secret-change-in-prod-64chars-minimum-length-required') is rejected with 401 on GET /api/auth/me for both a real user id and a random sub. Missing Authorization header → 401. Garbage bearer → 401. Real register→me→login→me flow works end-to-end. SEC-002 confirmed: /api/ai/summarize returned 200 with a valid summary (Emergent fallback key active, so no 502 path exercised in prod); test asserts that IF a 502 occurs the body must be exactly 'Le service IA est momentanément indisponible. Réessayez.' with no Traceback/Exception/openai/sk-/APIError leakage — code inspection of server.py (lines 848-933) confirms all 4 AI endpoints (summarize, suggest-links, expand, chat) use identical generic message and log exceptions server-side. Multi-tenant isolation intact: user B cannot GET user A's /api/pages/{id} (404), /api/entities/goal/{id} (404), or /api/entities/knowledge/{id}/context (404). Core flows work: [[wiki link]] auto-creates stub + backlinks resolve, goal/project/task entity creation, has_project relation, entity context, /api/search/universal, /api/tracking (journals+workouts+studies), /api/pillars (5 pillars seeded).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_security_fix.py",
+    "/app/test_reports/pytest/security_fix_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L41-43: MONGO_URL/DB_NAME/JWT_SECRET all use os.environ[...] (fail-fast on missing key). Correct hardening.",
+    "server.py L848-933: All 4 AI HTTPException(502, ...) branches use the identical generic French message; log.exception(...) is called server-side for observability. Meets SEC-002.",
+    "AIUnavailable exceptions still surface str(e) to the client via HTTPException(503, str(e)) at L850-851, L882-883, L902-903, L929-930. If AIUnavailable messages ever contain provider details this could re-introduce leakage; recommend confirming ai_service.AIUnavailable only carries curated user-facing strings.",
+    "server.py L967 uses deprecated @app.on_event('startup')/'shutdown'. Non-blocking, but consider migrating to FastAPI lifespan for future-proofing."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_security_fix.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "Ephemeral: two TEST_-prefixed users registered per run plus a few TEST_-prefixed pages/goal/project/task entities. Not cleaned up (not required by request); prefix allows easy identification.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Reusable test file: /app/backend/tests/test_security_fix.py. Run with: pytest /app/backend/tests/test_security_fix.py -v. Uses EXPO_PUBLIC_BACKEND_URL from /app/frontend/.env. OLD_HARDCODED_SECRET constant is the pre-fix JWT secret string; keep this to guard against regressions. GENERIC_AI_ERROR constant matches server.py exactly.",
+  "rca_of_issue": "N/A — this run verifies applied fixes. Both fixes verified working."
+}
